@@ -1,0 +1,20 @@
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE MA_TABLE CASCADE CONSTRAINTS';
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE != -942 THEN  -- L'erreur n'est pas liée à l'inexistence de la table
+      RAISE;
+    END IF;
+END;
+/
+
+BEGIN
+  EXECUTE IMMEDIATE '
+    CREATE TABLE MA_TABLE (
+      id NUMBER 
+    )';
+EXCEPTION
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('Erreur lors de la création de MA_TABLE : ' || SQLERRM);
+END;
+/
