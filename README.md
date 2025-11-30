@@ -33,7 +33,7 @@
   
 
 ## Amadou KOUYATÉ et Marie Wideline PIERRE
-* Rapport
+* Sauvegardes et journaux de transactions
 
 ## INSTRUCTIONS DE LANCEMENT
 * 
