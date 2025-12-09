@@ -9,7 +9,7 @@ BEGIN
 END;
 /
 
--- Trigger pour valider date_acquisition <= SYSDATE
+-- Trigger pour valider date_acquisition
 CREATE OR REPLACE TRIGGER EQUIPEMENT_DATE_TRG
 BEFORE INSERT OR UPDATE ON EQUIPEMENT
 FOR EACH ROW
@@ -20,7 +20,7 @@ BEGIN
 END;
 /
 
--- Trigger pour valider date_affectation >= PROJET.date_debut
+-- Trigger pour valider date_affectation
 CREATE OR REPLACE TRIGGER AFFECTATION_DATE_TRG
 BEFORE INSERT OR UPDATE ON AFFECTATION_EQUIP
 FOR EACH ROW
@@ -30,7 +30,7 @@ BEGIN
   SELECT date_debut
     INTO v_date_debut
     FROM PROJET
-   WHERE id_projet = :NEW.id_projet;
+    WHERE id_projet = :NEW.id_projet;
 
   IF :NEW.date_affectation < v_date_debut THEN
     RAISE_APPLICATION_ERROR(-20003, 'La date d''affectation ne peut pas être avant le début du projet.');
@@ -71,10 +71,10 @@ BEGIN
     date_op,
     description
   ) VALUES (
-    'EXPERIENCE',            -- Table concernée
-    'INSERT',                -- Type d'opération
-    USER,                    -- Utilisateur courant
-    SYSDATE,                 -- Date de l'opération
+    'EXPERIENCE',
+    'INSERT',
+    USER,
+    SYSDATE,
     'Nouvelle expérience insérée : ID=' || :NEW.id_exp ||
     ', Titre=' || :NEW.titre_exp ||
     ', Projet ID=' || :NEW.id_projet
@@ -95,7 +95,7 @@ BEGIN
   FROM EXPERIENCE
   WHERE id_exp = :NEW.id_exp;
 
-  -- Vérification stricte : la date de prélèvement ne peut pas être avant la date de réalisation
+  -- Vérifier que la date de prélèvement ne peut pas être avant la date de réalisation
   IF :NEW.date_prelevement < v_date_exp THEN
     RAISE_APPLICATION_ERROR(-20020, 'La date de prélèvement ne peut pas être antérieure à la date de réalisation de l''expérience.');
   END IF;
@@ -111,10 +111,6 @@ BEGIN
 
   IF :NEW.operation IS NOT NULL THEN
     :NEW.operation := UPPER(:NEW.operation);
-  END IF;
-
-  IF :NEW.table_concernee IS NOT NULL THEN
-    :NEW.table_concernee := UPPER(:NEW.table_concernee);
   END IF;
 END;
 /
