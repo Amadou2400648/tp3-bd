@@ -1,3 +1,6 @@
+-- Charger les fonctions dont dependent les procedures
+@fonctions_oper.sql  
+
 -- ==========================================
 --          PROCÉDURES OPÉRATIONNELLES
 -- ==========================================
@@ -23,6 +26,10 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20010, 'Le chercheur responsable n''existe pas.');
     END IF;
 
+    IF p_date_debut > p_date_fin THEN
+	    RAISE_APPLICATION_ERROR(-20020,'La date de début ne peut pas être après la date de fin.');
+	END IF;
+
     -- Insérer le projet
     INSERT INTO PROJET (
         titre, domaine, budget, date_debut, date_fin, id_chercheur_resp
@@ -31,7 +38,6 @@ BEGIN
     );
 
     COMMIT;
-
 EXCEPTION
     WHEN OTHERS THEN
         -- Annuler la transaction en cas d'erreur
@@ -42,4 +48,36 @@ END;
 /
 
 /** Affecter un équipement à un projet. **/
+CREATE OR REPLACE PROCEDURE affecter_equipement(
+    p_id_projet        IN NUMBER,
+    p_id_equipement    IN NUMBER,
+    p_date_affectation IN DATE
+)
+IS
+    v_libre NUMBER;
+    v_duree_projet_jours NUMBER;
+BEGIN
+    -- Vérifier la disponibilité de l'équipement
+    v_libre := verifier_disponibilite_equipement(p_id_equipement);
 
+    IF v_libre = 0 THEN
+        RAISE_APPLICATION_ERROR(-20020, 'L''équipement est déjà affecté à un autre projet.');
+    END IF;
+
+    v_duree_projet_jours := calculer_duree_projet(p_id_projet);
+
+    -- Insérer l'affectation
+    INSERT INTO AFFECTATION_EQUIP (
+        id_projet, id_equipement, date_affectation, duree_jours
+    ) VALUES (
+        p_id_projet, p_id_equipement, p_date_affectation, v_duree_projet_jours
+    );
+
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20021, 'Erreur lors de l''affectation de l''équipement : ' || SQLERRM);
+END;
+/
