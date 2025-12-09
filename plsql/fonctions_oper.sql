@@ -44,7 +44,7 @@ IS
     TYPE equipement_table IS TABLE OF equipement_record;
 
     l_equipements equipement_table;
-    l_disponibilite NUMBER := 0; 
+    l_disponibilite NUMBER := 0;
 BEGIN
     -- Récupérer l'équipement demandé
     SELECT id_equipement, etat
@@ -65,12 +65,36 @@ BEGIN
               AND (SYSDATE BETWEEN date_affectation AND date_affectation + NVL(duree_jours,0));
 
             IF v_count = 0 THEN
-                l_disponibilite := 1; 
+                l_disponibilite := 1;
             END IF;
         END;
     END IF;
 
     RETURN l_disponibilite;
 END;
+/
+
+/** Calculer la moyenne des mesures d'une expérience **/
+CREATE OR REPLACE FUNCTION moyenne_mesures_experience(p_id_exp IN NUMBER)
+RETURN NUMBER IS
+  v_moyenne NUMBER;
+BEGIN
+  -- Calculer la moyenne des mesures pour l'expérience donnée
+  SELECT AVG(mesure)
+  INTO v_moyenne
+  FROM ECHANTILLON
+  WHERE id_exp = p_id_exp;
+
+  -- Retourner la moyenne
+  RETURN v_moyenne;
+
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    -- Si aucun échantillon trouvé, retourner NULL
+    RETURN NULL;
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('Erreur lors du calcul de la moyenne : ' || SQLERRM);
+    RETURN NULL;
+END moyenne_mesures_experience;
 /
 

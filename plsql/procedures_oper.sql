@@ -1,5 +1,5 @@
 -- Charger les fonctions dont dependent les procedures
-@fonctions_oper.sql  
+@fonctions_oper.sql
 
 -- ==========================================
 --          PROCÉDURES OPÉRATIONNELLES
@@ -80,4 +80,51 @@ EXCEPTION
         ROLLBACK;
         RAISE_APPLICATION_ERROR(-20021, 'Erreur lors de l''affectation de l''équipement : ' || SQLERRM);
 END;
+/
+
+/** Supprimer projet **/
+CREATE OR REPLACE PROCEDURE supprimer_projet(p_id_projet IN NUMBER) IS
+  -- Curseur pour les affectations d'équipement liées au projet
+  CURSOR cur_affect IS
+    SELECT id_affect FROM AFFECTATION_EQUIP WHERE id_projet = p_id_projet
+    FOR UPDATE;
+
+  -- Curseur pour les expériences liées au projet
+  CURSOR cur_exp IS
+    SELECT id_exp FROM EXPERIENCE WHERE id_projet = p_id_projet
+    FOR UPDATE;
+
+  -- Curseur pour les échantillons liés aux expériences du projet
+  CURSOR cur_echant IS
+    SELECT e.id_echantillon
+    FROM ECHANTILLON e
+    JOIN EXPERIENCE ex ON e.id_exp = ex.id_exp
+    WHERE ex.id_projet = p_id_projet
+    FOR UPDATE;
+
+BEGIN
+  -- Supprimer les échantillons liés aux expériences
+  FOR r_echant IN cur_echant LOOP
+    DELETE FROM ECHANTILLON WHERE id_echantillon = r_echant.id_echantillon;
+  END LOOP;
+
+  -- Supprimer les expériences liées au projet
+  FOR r_exp IN cur_exp LOOP
+    DELETE FROM EXPERIENCE WHERE id_exp = r_exp.id_exp;
+  END LOOP;
+
+  -- Supprimer les affectations d'équipement liées au projet
+  FOR r_affect IN cur_affect LOOP
+    DELETE FROM AFFECTATION_EQUIP WHERE id_affect = r_affect.id_affect;
+  END LOOP;
+
+  -- Enfin, supprimer le projet lui-même
+  DELETE FROM PROJET WHERE id_projet = p_id_projet;
+
+  COMMIT;
+EXCEPTION
+  WHEN OTHERS THEN
+    ROLLBACK;
+    DBMS_OUTPUT.PUT_LINE('Erreur lors de la suppression du projet : ' || SQLERRM);
+END supprimer_projet;
 /
