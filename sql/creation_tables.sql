@@ -1,3 +1,5 @@
+-- Charger les trigger dont dependent la création des tables
+@../plsql/triggers.sql
 
 -- Supprimer la table CHERCHEUR si elle existe
 BEGIN

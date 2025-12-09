@@ -112,6 +112,10 @@ BEGIN
   IF :NEW.operation IS NOT NULL THEN
     :NEW.operation := UPPER(:NEW.operation);
   END IF;
+
+  IF :NEW.table_concernee IS NOT NULL THEN
+    :NEW.table_concernee := UPPER(:NEW.table_concernee);
+  END IF;
 END;
 /
 
