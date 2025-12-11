@@ -143,5 +143,63 @@ BEGIN
 END;
 /
 
+/** TRG des mises à jour dans CHERCHEUR **/
+CREATE OR REPLACE TRIGGER TRG_PROJET_BEFORE_INSERT
+BEFORE INSERT ON PROJET
+FOR EACH ROW
+BEGIN
+    IF :NEW.date_fin < :NEW.date_debut THEN
+        RAISE_APPLICATION_ERROR(-20100, 'La date de fin ne peut pas être avant la date de début.');
+    END IF;
+
+    IF :NEW.budget <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20101, 'Le budget doit être supérieur à 0.');
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER TRG_AFFECTATION_BEFORE_INSERT
+BEFORE INSERT ON AFFECTATION_EQUIP
+FOR EACH ROW
+DECLARE
+    v_etat VARCHAR2(20);
+BEGIN
+    SELECT etat
+    INTO v_etat
+    FROM EQUIPEMENT
+    WHERE id_equipement = :NEW.id_equipement;
+
+    IF v_etat <> 'DISPONIBLE' THEN
+        RAISE_APPLICATION_ERROR(-20200, 'Équipement non disponible pour affectation.');
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER TRG_AFFECTATION_BEFORE_INSERT
+BEFORE INSERT ON AFFECTATION_EQUIP
+FOR EACH ROW
+DECLARE
+    v_etat VARCHAR2(20);
+BEGIN
+    SELECT etat
+    INTO v_etat
+    FROM EQUIPEMENT
+    WHERE id_equipement = :NEW.id_equipement;
+
+    IF v_etat <> 'DISPONIBLE' THEN
+        RAISE_APPLICATION_ERROR(-20200, 'Équipement non disponible pour affectation.');
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER TRG_AFFECTATION_AFTER_DELETE
+AFTER DELETE ON AFFECTATION_EQUIP
+FOR EACH ROW
+BEGIN
+    UPDATE EQUIPEMENT
+    SET etat = 'DISPONIBLE'
+    WHERE id_equipement = :OLD.id_equipement;
+END;
+/
 
 
