@@ -128,3 +128,82 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE('Erreur lors de la suppression du projet : ' || SQLERRM);
 END supprimer_projet;
 /
+
+/** journaliser_action **/
+CREATE OR REPLACE PROCEDURE journaliser_action(
+  p_table       IN VARCHAR2,
+  p_operation   IN VARCHAR2,
+  p_utilisateur IN VARCHAR2,
+  p_description IN VARCHAR2
+) IS
+BEGIN
+  INSERT INTO LOG_OPERATION (table_concernee, operation, utilisateur, date_op, description)
+  VALUES (p_table, SUBSTR(p_operation,1,10), p_utilisateur, SYSDATE, p_description);
+
+  COMMIT;
+EXCEPTION
+  WHEN OTHERS THEN
+    ROLLBACK;
+    RAISE_APPLICATION_ERROR(-20010, 'Erreur journaliser_action : ' || SQLERRM);
+END journaliser_action;
+/
+
+/** planifier_experience **/
+CREATE OR REPLACE PROCEDURE planifier_experience(
+  p_id_projet        IN NUMBER,
+  p_titre_exp        IN VARCHAR2,
+  p_date_realisation IN DATE,
+  p_resultat         IN VARCHAR2,
+  p_statut           IN VARCHAR2,
+  p_type_echantillon IN VARCHAR2,
+  p_date_prelevement IN DATE,
+  p_mesure           IN NUMBER,
+  p_id_equipement    IN NUMBER,
+  p_date_affectation IN DATE,
+  p_duree_jours      IN NUMBER
+) IS
+  v_id_exp NUMBER;
+  v_id_echant NUMBER;
+BEGIN
+  -- Vérifier que le projet existe
+  DECLARE 
+    v_tmp NUMBER; 
+  BEGIN 
+    SELECT 1 INTO v_tmp FROM PROJET WHERE id_projet = p_id_projet;
+  END;
+
+  IF p_statut IS NOT NULL AND p_statut NOT IN ('En cours','Terminée','Annulée') THEN
+    RAISE_APPLICATION_ERROR(-20030, 'Statut non valide.');
+  END IF;
+
+  -- Insérer expérience
+  INSERT INTO EXPERIENCE (id_projet, titre_exp, date_realisation, resultat, statut)
+  VALUES (p_id_projet, p_titre_exp, p_date_realisation, p_resultat, p_statut)
+  RETURNING id_exp INTO v_id_exp;
+
+  -- Insérer échantillon 
+  IF p_type_echantillon IS NOT NULL THEN
+    INSERT INTO ECHANTILLON (id_exp, type_echantillon, date_prelevement, mesure)
+    VALUES (v_id_exp, p_type_echantillon, p_date_prelevement, p_mesure)
+    RETURNING id_echantillon INTO v_id_echant;
+  END IF;
+
+  -- Appel d'affectation d'équipement
+  IF p_id_equipement IS NOT NULL THEN
+    affecter_equipement(p_id_projet, p_id_equipement, p_date_affectation, p_duree_jours);
+  END IF;
+
+  -- Journaliser
+  journaliser_action('EXPERIENCE', 'INSERT', USER,
+    'Planification experience id=' || v_id_exp || ' projet=' || p_id_projet || ' titre=' || NVL(p_titre_exp,'<null>'));
+
+  COMMIT;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    ROLLBACK;
+    RAISE_APPLICATION_ERROR(-20031, 'Projet introuvable lors de planification experience.');
+  WHEN OTHERS THEN
+    ROLLBACK;
+    RAISE_APPLICATION_ERROR(-20032, 'Erreur planifier_experience : ' || SQLERRM);
+END planifier_experience;
+/
