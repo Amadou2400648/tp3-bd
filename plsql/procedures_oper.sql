@@ -12,7 +12,8 @@ CREATE OR REPLACE PROCEDURE ajouter_projet(
     p_budget            IN PROJET.budget%TYPE,
     p_date_debut        IN PROJET.date_debut%TYPE,
     p_date_fin          IN PROJET.date_fin%TYPE,
-    p_id_chercheur_resp IN CHERCHEUR.id_chercheur%TYPE
+    p_id_chercheur_resp IN CHERCHEUR.id_chercheur%TYPE,
+    p_id_out       OUT NUMBER
 )
 IS
     v_count NUMBER;
@@ -35,7 +36,8 @@ BEGIN
         titre, domaine, budget, date_debut, date_fin, id_chercheur_resp
     ) VALUES (
         p_titre, p_domaine, p_budget, p_date_debut, p_date_fin, p_id_chercheur_resp
-    );
+    )
+    RETURNING id_projet INTO p_id_out;
 
     COMMIT;
 EXCEPTION
