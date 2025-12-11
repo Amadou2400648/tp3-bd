@@ -98,3 +98,64 @@ EXCEPTION
 END moyenne_mesures_experience;
 /
 
+-- TYPE POUR statistiques_equipements
+CREATE OR REPLACE TYPE stats_equipements_rec AS OBJECT (
+    disponibles NUMBER,
+    occupes     NUMBER
+);
+/
+
+-- PACKAGE TYPES POUR budget_moyen_par_domaine
+CREATE OR REPLACE PACKAGE types_budget AS
+    TYPE t_budget IS RECORD (
+        domaine VARCHAR2(50),
+        budget_moyen NUMBER
+    );
+
+    TYPE table_budget IS TABLE OF t_budget INDEX BY PLS_INTEGER;
+END;
+/
+
+
+
+-- FONCTION statistiques_equipements
+CREATE OR REPLACE FUNCTION statistiques_equipements
+RETURN stats_equipements_rec
+AS
+    v_dispo  NUMBER;
+    v_occupe NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_dispo
+    FROM EQUIPEMENTS
+    WHERE etat = 'DISPONIBLE';
+
+    SELECT COUNT(*) INTO v_occupe
+    FROM EQUIPEMENTS
+    WHERE etat = 'OCCUPE';
+
+    RETURN stats_equipements_rec(v_dispo, v_occupe);
+END;
+/
+
+
+-- FONCTION budget_moyen_par_domaine
+CREATE OR REPLACE FUNCTION budget_moyen_par_domaine
+RETURN types_budget.table_budget
+AS
+    v_table types_budget.table_budget;
+    i NUMBER := 0;
+BEGIN
+    FOR r IN (
+        SELECT domaine, AVG(budget) AS avg_budget
+        FROM PROJETS
+        GROUP BY domaine
+    ) LOOP
+        i := i + 1;
+        v_table(i).domaine := r.domaine;
+        v_table(i).budget_moyen := r.avg_budget;
+    END LOOP;
+
+    RETURN v_table;
+END;
+/
+

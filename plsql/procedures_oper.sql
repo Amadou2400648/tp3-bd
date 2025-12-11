@@ -193,9 +193,19 @@ BEGIN
     affecter_equipement(p_id_projet, p_id_equipement, p_date_affectation, p_duree_jours);
   END IF;
 
-  -- Journaliser
-  journaliser_action('EXPERIENCE', 'INSERT', USER,
-    'Planification experience id=' || v_id_exp || ' projet=' || p_id_projet || ' titre=' || NVL(p_titre_exp,'<null>'));
+ BEGIN
+  journaliser_action(
+    'EXPERIENCE',
+    'INSERT',
+    USER,
+    'Planification experience id=' || v_id_exp ||
+    ' projet=' || p_id_projet ||
+    ' titre=' || NVL(p_titre_exp,'<null>')
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;  
+END;
 
   COMMIT;
 EXCEPTION
@@ -206,4 +216,111 @@ EXCEPTION
     ROLLBACK;
     RAISE_APPLICATION_ERROR(-20032, 'Erreur planifier_experience : ' || SQLERRM);
 END planifier_experience;
+/
+
+-- PROCEDURE rapport_activite_projets
+CREATE OR REPLACE PROCEDURE rapport_activite_projets AS
+BEGIN
+    FOR p IN (SELECT id_projet, titre FROM PROJETS) LOOP
+
+        DECLARE
+            v_nb_exp       NUMBER := 0;
+            v_taux_success NUMBER := 0;
+        BEGIN
+            SELECT COUNT(*)
+            INTO v_nb_exp
+            FROM EXPERIENCES
+            WHERE id_projet = p.id_projet;
+
+            IF v_nb_exp > 0 THEN
+                SELECT (SUM(CASE WHEN succes = 'OUI' THEN 1 ELSE 0 END) / COUNT(*)) * 100
+                INTO v_taux_success
+                FROM EXPERIENCES
+                WHERE id_projet = p.id_projet;
+            END IF;
+
+            DBMS_OUTPUT.PUT_LINE(
+                '* Projet: ' || p.titre ||
+                ' | Expériences: ' || v_nb_exp ||
+                ' | Taux réussite: ' || ROUND(v_taux_success, 2) || '%'
+            );
+
+            -- Appel de la fonction moyenne_mesures_experience
+            FOR e IN (
+                SELECT id_experience FROM EXPERIENCES WHERE id_projet = p.id_projet
+            ) LOOP
+                DBMS_OUTPUT.PUT_LINE(
+                    '   - Exp ' || e.id_experience ||
+                    ' | Moyenne mesures: ' || moyenne_mesures_experience(e.id_experience)
+                );
+            END LOOP;
+        END;
+    END LOOP;
+END;
+/
+
+-- PROCEDURE rapport_projets_par_chercheur
+CREATE OR REPLACE PROCEDURE rapport_projets_par_chercheur (
+    p_id_chercheur IN CHERCHEURS.id_chercheur%TYPE
+) AS
+    v_nom CHERCHEURS.nom%TYPE;
+    v_budget_total NUMBER := 0;
+BEGIN
+    SELECT nom INTO v_nom
+    FROM CHERCHEURS
+    WHERE id_chercheur = p_id_chercheur;
+
+    FOR r IN (
+        SELECT id_projet, titre, budget
+        FROM PROJETS
+        WHERE id_chercheur = p_id_chercheur
+    ) LOOP
+        DBMS_OUTPUT.PUT_LINE('* Projet: ' || r.titre || ' | Budget: ' || r.budget);
+        v_budget_total := v_budget_total + r.budget;
+    END LOOP;
+
+    DBMS_OUTPUT.PUT_LINE('Budget total : ' || v_budget_total || ' $');
+END;
+/
+
+
+-- PROCEDURE rapport_activite_projets
+CREATE OR REPLACE PROCEDURE rapport_activite_projets AS
+BEGIN
+    FOR p IN (SELECT id_projet, titre FROM PROJETS) LOOP
+
+        DECLARE
+            v_nb_exp       NUMBER := 0;
+            v_taux_success NUMBER := 0;
+        BEGIN
+            SELECT COUNT(*)
+            INTO v_nb_exp
+            FROM EXPERIENCES
+            WHERE id_projet = p.id_projet;
+
+            IF v_nb_exp > 0 THEN
+                SELECT (SUM(CASE WHEN succes = 'OUI' THEN 1 ELSE 0 END) / COUNT(*)) * 100
+                INTO v_taux_success
+                FROM EXPERIENCES
+                WHERE id_projet = p.id_projet;
+            END IF;
+
+            DBMS_OUTPUT.PUT_LINE(
+                '* Projet: ' || p.titre ||
+                ' | Expériences: ' || v_nb_exp ||
+                ' | Taux réussite: ' || ROUND(v_taux_success, 2) || '%'
+            );
+
+            -- Appel de la fonction moyenne_mesures_experience
+            FOR e IN (
+                SELECT id_experience FROM EXPERIENCES WHERE id_projet = p.id_projet
+            ) LOOP
+                DBMS_OUTPUT.PUT_LINE(
+                    '   - Exp ' || e.id_experience ||
+                    ' | Moyenne mesures: ' || moyenne_mesures_experience(e.id_experience)
+                );
+            END LOOP;
+        END;
+    END LOOP;
+END;
 /
